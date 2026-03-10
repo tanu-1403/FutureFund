@@ -1,9 +1,17 @@
-
 import numpy as np
 
-def future_income(current_income, growth_rate, years):
-    return current_income * (1 + growth_rate) ** years
+def future_goal_value(cost, inflation, years):
+
+    return cost * (1 + inflation) ** years
 
 
-def savings_projection(income, savings_rate, years):
-    return income * savings_rate * years
+def required_sip(future_value, annual_return, years):
+
+    r = annual_return / 12
+    n = years * 12
+
+    sip = (future_value * r) / (((1 + r) ** n - 1) * (1 + r))
+
+    return sip
+    
+    
