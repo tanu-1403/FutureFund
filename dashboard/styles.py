@@ -1,51 +1,70 @@
 import streamlit as st
 
-
 def load_styles():
-
+    """
+    Applies custom CSS styles for the FutureFund dashboard and Finley chatbot.
+    """
     st.markdown("""
+    <style>
+    /* Main app background gradient */
+    .stApp {
+        background: linear-gradient(
+            135deg,
+            #141E30,
+            #243B55,
+            #0f2027
+        );
+        color: #ffffff;
+    }
 
-<style>
+    /* Finley chat bubble / UI container */
+    .finley-box {
+        display: flex;
+        align-items: center;
+        background: rgba(255,255,255,0.08);
+        padding: 12px;
+        border-radius: 14px;
+        margin-bottom: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
 
-.stApp{
-background: linear-gradient(
-135deg,
-#141E30,
-#243B55,
-#0f2027
-);
-}
+    .finley-text {
+        margin-left: 10px;
+    }
 
-.finley-box{
+    /* Streamlit metrics */
+    div[data-testid="stMetric"] {
+        background: rgba(255,255,255,0.05);
+        padding: 12px;
+        border-radius: 12px;
+        color: #ffffff;
+    }
 
-display:flex;
-align-items:center;
+    /* Finley chat messages */
+    .finley-chat {
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 14px;
+    }
 
-background:rgba(255,255,255,0.08);
+    .finley-message-user {
+        background: #d1e7ff;
+        color: #000;
+    }
 
-padding:12px;
-border-radius:14px;
+    .finley-message-assistant {
+        background: #fff59d;
+        color: #000;
+    }
 
-margin-bottom:12px;
+    /* Scrollbar for chat window */
+    .finley-chat::-webkit-scrollbar {
+        width: 6px;
+    }
 
-border:1px solid rgba(255,255,255,0.1);
+    .finley-chat::-webkit-scrollbar-thumb {
+        background-color: rgba(255,255,255,0.3);
+        border-radius: 3px;
+    }
 
-}
-
-.finley-text{
-margin-left:10px;
-}
-
-div[data-testid="stMetric"]{
-
-background:rgba(255,255,255,0.05);
-
-padding:12px;
-
-border-radius:12px;
-
-}
-
-</style>
-
-""", unsafe_allow_html=True)
+    </style>
+    """, unsafe_allow_html=True)
