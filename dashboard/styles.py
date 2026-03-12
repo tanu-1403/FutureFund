@@ -1,70 +1,99 @@
+
 import streamlit as st
+
 
 def load_styles():
     """
-    Applies custom CSS styles for the FutureFund dashboard and Finley chatbot.
+    Apply custom CSS styling to the Streamlit app.
+    Improves UI appearance and consistency.
     """
-    st.markdown("""
-    <style>
-    /* Main app background gradient */
-    .stApp {
-        background: linear-gradient(
-            135deg,
-            #141E30,
-            #243B55,
-            #0f2027
-        );
-        color: #ffffff;
-    }
 
-    /* Finley chat bubble / UI container */
-    .finley-box {
-        display: flex;
-        align-items: center;
-        background: rgba(255,255,255,0.08);
-        padding: 12px;
-        border-radius: 14px;
-        margin-bottom: 12px;
-        border: 1px solid rgba(255,255,255,0.1);
-    }
+    st.markdown(
+        """
+        <style>
 
-    .finley-text {
-        margin-left: 10px;
-    }
+        /* -------------------------
+        MAIN APP BACKGROUND
+        ------------------------- */
+        .stApp {
+            background: linear-gradient(
+                135deg,
+                #141E30,
+                #243B55
+            );
+            color: white;
+        }
 
-    /* Streamlit metrics */
-    div[data-testid="stMetric"] {
-        background: rgba(255,255,255,0.05);
-        padding: 12px;
-        border-radius: 12px;
-        color: #ffffff;
-    }
+        /* -------------------------
+        HEADINGS
+        ------------------------- */
+        h1, h2, h3, h4 {
+            color: #f1f1f1;
+            font-weight: 600;
+        }
 
-    /* Finley chat messages */
-    .finley-chat {
-        font-family: 'Segoe UI', sans-serif;
-        font-size: 14px;
-    }
+        /* -------------------------
+        METRIC CARDS
+        ------------------------- */
+        div[data-testid="stMetric"] {
+            background: rgba(255,255,255,0.06);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
 
-    .finley-message-user {
-        background: #d1e7ff;
-        color: #000;
-    }
+        /* -------------------------
+        SIDEBAR
+        ------------------------- */
+        section[data-testid="stSidebar"] {
+            background-color: #0f172a;
+        }
 
-    .finley-message-assistant {
-        background: #fff59d;
-        color: #000;
-    }
+        /* -------------------------
+        BUTTONS
+        ------------------------- */
+        button[kind="primary"] {
+            background-color: #4CAF50;
+            border-radius: 10px;
+            border: none;
+        }
 
-    /* Scrollbar for chat window */
-    .finley-chat::-webkit-scrollbar {
-        width: 6px;
-    }
+        button[kind="primary"]:hover {
+            background-color: #43a047;
+        }
 
-    .finley-chat::-webkit-scrollbar-thumb {
-        background-color: rgba(255,255,255,0.3);
-        border-radius: 3px;
-    }
+        /* -------------------------
+        INPUT FIELDS
+        ------------------------- */
+        input, textarea {
+            border-radius: 8px !important;
+        }
 
-    </style>
-    """, unsafe_allow_html=True)
+        /* -------------------------
+        CHAT BUBBLES
+        ------------------------- */
+        div[data-testid="stChatMessage"] {
+            background: rgba(255,255,255,0.04);
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        /* -------------------------
+        DATAFRAME
+        ------------------------- */
+        .stDataFrame {
+            border-radius: 12px;
+        }
+
+        /* -------------------------
+        DIVIDER
+        ------------------------- */
+        hr {
+            border-color: rgba(255,255,255,0.1);
+        }
+
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+

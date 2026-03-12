@@ -1,37 +1,90 @@
-from datetime import datetime, timedelta
 
-def investment_projection(sip, annual_return, years, inflation=0.06, start_date=None):
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+
+def investment_projection(
+    sip,
+    annual_return,
+    years,
+    inflation=0.06,
+    sip_growth=0.0,
+    start_date=None
+):
     """
-    Projects investment growth over time with compounding and optional inflation adjustment.
+    Project investment growth over time with compounding and inflation adjustment.
 
-    Parameters:
-        sip : float : Monthly investment
-        annual_return : float : Expected annual return (decimal, e.g., 0.08 for 8%)
-        years : int : Investment horizon in years
-        inflation : float : Expected annual inflation rate (default 6%)
-        start_date : datetime : Optional start date for projection
+    Parameters
+    ----------
+    sip : float
+        Monthly investment
+    annual_return : float
+        Expected annual return (decimal)
+    years : int
+        Investment horizon
+    inflation : float
+        Annual inflation rate
+    sip_growth : float
+        Optional annual increase in SIP
+    start_date : datetime
+        Optional start date
 
-    Returns:
-        list of dicts : Each dict has month, nominal portfolio, inflation-adjusted portfolio
+    Returns
+    -------
+    list[dict]
+        Monthly portfolio projections
     """
-    r = annual_return / 12
-    months = years * 12
-    portfolio_value = 0
-    projections = []
 
-    # Set start date
+    # -----------------------------
+    # Input validation
+    # -----------------------------
+    sip = float(sip)
+    annual_return = float(annual_return)
+    years = int(years)
+
+    if sip < 0:
+        raise ValueError("SIP must be non-negative")
+
+    if years <= 0:
+        raise ValueError("Years must be positive")
+
     if not start_date:
         start_date = datetime.today()
 
-    for i in range(1, months + 1):
-        portfolio_value = portfolio_value * (1 + r) + sip
-        # Calculate inflation-adjusted value
-        inflation_adjusted_value = portfolio_value / ((1 + inflation) ** (i / 12))
-        month_date = start_date + timedelta(days=30 * i)
+    months = years * 12
+    monthly_return = annual_return / 12
+    monthly_inflation = (1 + inflation) ** (1/12) - 1
+
+    portfolio = 0
+    projections = []
+
+    current_sip = sip
+
+    # -----------------------------
+    # Projection loop
+    # -----------------------------
+    for m in range(1, months + 1):
+
+        portfolio = portfolio * (1 + monthly_return) + current_sip
+
+        # inflation-adjusted value
+        real_value = portfolio / ((1 + monthly_inflation) ** m)
+
         projections.append({
-            "month": month_date,
-            "nominal": portfolio_value,
-            "real_value": inflation_adjusted_value
+
+            "date": start_date + relativedelta(months=m),
+
+            "nominal": round(portfolio, 2),
+
+            "real_value": round(real_value, 2),
+
+            "sip": round(current_sip, 2)
+
         })
 
+        # yearly SIP increase
+        if sip_growth > 0 and m % 12 == 0:
+            current_sip *= (1 + sip_growth)
+
     return projections
+

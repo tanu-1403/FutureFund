@@ -1,68 +1,51 @@
+
 import streamlit as st
+
 
 def finley_intro():
     """
-    Displays the Finley assistant on the dashboard with a walking animation
-    and a floating chat window ready for messages.
+    Displays the Finley AI assistant intro banner.
     """
-    st.markdown("""
-    <style>
-    /* Walking animation for Finley */
-    @keyframes walk {
-        0% {left:-120px;}
-        100% {left:100%;}
-    }
-    .finley-walk {
-        position: fixed;
-        bottom: 30px;
-        animation: walk 20s linear infinite;
-        z-index: 999;
-    }
 
-    /* Chat bubble container */
-    .finley-chat {
-        position: fixed;
-        bottom: 120px;
-        right: 20px;
-        width: 320px;
-        max-height: 400px;
-        background: rgba(255,255,255,0.95);
-        border-radius: 12px;
-        padding: 12px;
-        color: black;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        overflow-y: auto;
-        z-index: 999;
-    }
+    st.markdown(
+        """
+        <div style="
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        ">
 
-    /* User message style */
-    .finley-message-user {
-        background: #d1e7ff;
-        padding: 6px 10px;
-        border-radius: 10px;
-        margin: 4px 0;
-        text-align: right;
-    }
-
-    /* Assistant message style */
-    .finley-message-assistant {
-        background: #fff59d;
-        padding: 6px 10px;
-        border-radius: 10px;
-        margin: 4px 0;
-        text-align: left;
-    }
-    </style>
-
-    <!-- Finley character -->
-    <div class="finley-walk">
-        <img src="https://cdn-icons-png.flaticon.com/512/4712/4712035.png" width="90">
-    </div>
-
-    <!-- Chat window -->
-    <div class="finley-chat" id="chat-box">
-        <div class="finley-message-assistant">
-            Hi! I'm Finley, your financial assistant. Ask me about your goals, SIPs, or simulations!
+        <div style="font-size:28px">
+        🤖
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+
+        <div>
+
+        <div style="
+            font-size:18px;
+            font-weight:600;
+            margin-bottom:4px;
+        ">
+        Finley — Your AI Financial Assistant
+        </div>
+
+        <div style="
+            font-size:14px;
+            opacity:0.85;
+        ">
+        Ask about <b>goals</b>, <b>SIP planning</b>, or 
+        <b>investment probability</b>.
+        </div>
+
+        </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+

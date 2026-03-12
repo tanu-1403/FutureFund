@@ -1,4 +1,3 @@
-# dashboard_app.py
 
 import sys
 import os
@@ -25,8 +24,7 @@ from src.life_simulator import simulate_life
 from utils.goal_manager import (
     initialize_goals,
     add_goal,
-    get_goals,
-    display_sticky_goals
+    get_goals
 )
 
 from utils.helpers import format_currency
@@ -41,16 +39,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --------------------------------------------------
-# LOAD STYLES
-# --------------------------------------------------
-
 load_styles()
-
-# --------------------------------------------------
-# INITIALIZE GOALS
-# --------------------------------------------------
-
 initialize_goals()
 
 # --------------------------------------------------
@@ -59,30 +48,17 @@ initialize_goals()
 
 finley_intro()
 
-# --------------------------------------------------
-# PAGE TITLE
-# --------------------------------------------------
-
 st.title("🚀 FutureFund")
 st.markdown("### Design Your Future. One Goal at a Time.")
-
-st.markdown(
-"""
----
-### 📊 Your Personal Financial Planning Dashboard
-Track goals, simulate investments, and design your future wealth.
----
-"""
-)
 
 # --------------------------------------------------
 # CREATE 3 COLUMN LAYOUT
 # --------------------------------------------------
 
-left, center, right = st.columns([1.1, 2.5, 1.1])
+left, center, right = st.columns([1.2, 2.8, 1.2])
 
 # ==================================================
-# LEFT PANEL → GOAL NOTEBOOK
+# LEFT PANEL → GOALS
 # ==================================================
 
 with left:
@@ -93,39 +69,32 @@ with left:
 
     goal_cost = st.number_input(
         "Goal Cost",
-        1000,
-        100000000,
-        100000
+        min_value=1000,
+        max_value=100000000,
+        value=100000
     )
 
     goal_years = st.slider(
         "Years",
-        1,
-        25,
-        5
+        min_value=1,
+        max_value=30,
+        value=5
     )
 
     note = st.text_area("Notes")
 
-    col1, col2 = st.columns(2)
-
-    # ---- Save Goal ----
-    if col1.button("Save Goal"):
+    if st.button("Save Goal"):
 
         if goal_name.strip() == "":
-            st.warning("Please enter a goal name.")
+            st.warning("Please enter a goal name")
 
         else:
-            add_goal(goal_name, goal_cost, goal_years, note)
-            st.success("Goal Saved!")
-
-    # ---- Save All Goals ----
-    if col2.button("Save All Goals"):
-
-        from utils.goal_manager import save_goals_to_file
-        save_goals_to_file()
-
-        st.success("Goals saved to goals.json")
+            try:
+                add_goal(goal_name, goal_cost, goal_years, note)
+                st.success("Goal Saved!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Could not save goal: {e}")
 
     st.divider()
 
@@ -133,90 +102,16 @@ with left:
 
     goals_list = get_goals()
 
-    if len(goals_list) == 0:
-        st.info("No goals yet")
+    if not goals_list:
+        st.info("No goals added yet")
 
-    for i, g in enumerate(goals_list):
+    for g in goals_list:
 
-        st.markdown(f"**{g['name']}**")
-        st.write(f"Cost: ₹{g['cost']:,}")
-        st.write(f"Years: {g['years']}")
-        st.write(g["note"])
-
-        edit_col, delete_col = st.columns(2)
-
-        if edit_col.button("Edit", key=f"edit{i}"):
-
-            st.session_state.edit_index = i
-            st.session_state.edit_name = g["name"]
-            st.session_state.edit_cost = g["cost"]
-            st.session_state.edit_years = g["years"]
-            st.session_state.edit_note = g["note"]
-
-        if delete_col.button("Delete", key=f"del{i}"):
-
-            from utils.goal_manager import delete_goal
-            delete_goal(i)
-
-            st.experimental_rerun()
-
+        st.markdown(f"**{g.get('name','Unknown Goal')}**")
+        st.write(f"Cost: ₹{g.get('cost',0):,}")
+        st.write(f"Years: {g.get('years',0)}")
+        st.write(g.get("note",""))
         st.divider()
-
-    # ---- Editing Section ----
-
-    if "edit_index" in st.session_state:
-
-        st.subheader("✏️ Edit Goal")
-
-        idx = st.session_state.edit_index
-
-        new_name = st.text_input(
-            "Edit Name",
-            value=st.session_state.edit_name
-        )
-
-        new_cost = st.number_input(
-            "Edit Cost",
-            1000,
-            100000000,
-            value=st.session_state.edit_cost
-        )
-
-        new_years = st.slider(
-            "Edit Years",
-            1,
-            25,
-            value=st.session_state.edit_years
-        )
-
-        new_note = st.text_area(
-            "Edit Notes",
-            value=st.session_state.edit_note
-        )
-
-        if st.button("Update Goal"):
-
-            from utils.goal_manager import edit_goal
-
-            edit_goal(
-                idx,
-                new_name,
-                new_cost,
-                new_years,
-                new_note
-            )
-
-            for key in [
-                "edit_index",
-                "edit_name",
-                "edit_cost",
-                "edit_years",
-                "edit_note"
-            ]:
-                st.session_state.pop(key)
-
-            st.success("Goal Updated!")
-            st.experimental_rerun()
 
 # ==================================================
 # RIGHT PANEL → USER PROFILE
@@ -228,16 +123,16 @@ with right:
 
     income = st.number_input(
         "Monthly Income",
-        1000,
-        500000,
-        20000
+        min_value=1000,
+        max_value=500000,
+        value=20000
     )
 
     savings = st.number_input(
         "Monthly Savings",
-        500,
-        200000,
-        5000
+        min_value=500,
+        max_value=200000,
+        value=5000
     )
 
     inflation = st.slider(
@@ -271,7 +166,7 @@ with right:
     elif savings_rate >= 0.10:
         score += 20
 
-    if len(get_goals()) > 0:
+    if len(goals_list) > 0:
         score += 30
 
     if savings >= 0.2 * income:
@@ -280,11 +175,11 @@ with right:
     st.metric("Health Score", f"{score}/100")
 
     if score > 70:
-        st.success("Excellent financial discipline!")
+        st.success("Excellent financial discipline")
     elif score > 40:
-        st.info("Good start. Improve savings rate.")
+        st.info("Good start. Try increasing savings")
     else:
-        st.warning("Consider increasing savings.")
+        st.warning("Consider improving your savings rate")
 
 # ==================================================
 # CENTER PANEL → DASHBOARD
@@ -292,11 +187,11 @@ with right:
 
 with center:
 
-    goals = get_goals()
+    goals = goals_list
 
-    if len(goals) == 0:
+    if not goals:
 
-        st.info("Add your first goal to start planning.")
+        st.info("Add a goal to start planning.")
 
     else:
 
@@ -304,48 +199,45 @@ with center:
 
         for g in goals:
 
-            future_value = future_goal_value(
-                g["cost"],
-                inflation,
-                g["years"]
-            )
+            try:
 
-            sip = required_sip(
-                future_value,
-                return_rate,
-                g["years"]
-            )
+                future_value = future_goal_value(
+                    g.get("cost",0),
+                    inflation,
+                    g.get("years",1)
+                )
 
-            # ---- Monte Carlo Safety ----
-
-            if sip > 0 and g["years"] > 0:
+                sip = required_sip(
+                    future_value,
+                    return_rate,
+                    g.get("years",1)
+                )
 
                 mc = monte_carlo_simulation(
                     sip,
-                    g["years"],
+                    g.get("years",1),
                     simulations=500
                 )
 
+                mc_values = pd.to_numeric(pd.Series(mc), errors="coerce").dropna()
+
                 probability = (
-                    pd.Series(mc) >= future_value
-                ).mean()
+                    (mc_values >= future_value).mean()
+                    if not mc_values.empty else 0
+                )
 
-            else:
+                dashboard_data.append({
 
-                probability = 0
+                    "Goal": g.get("name","Unknown"),
+                    "Future Cost": future_value,
+                    "Required SIP": sip,
+                    "Probability": probability
 
-            g["future_cost"] = future_value
-            g["required_sip"] = sip
-            g["success_prob"] = probability
+                })
 
-            dashboard_data.append({
+            except Exception as e:
 
-                "Goal": g["name"],
-                "Future Cost": future_value,
-                "Required SIP": sip,
-                "Probability": probability
-
-            })
+                st.warning(f"Simulation failed for goal {g.get('name')}")
 
         df_goals = pd.DataFrame(dashboard_data)
 
@@ -353,27 +245,14 @@ with center:
         # GOALS TABLE
         # --------------------------------------------------
 
-        st.subheader("📊 All Goals Overview")
+        st.subheader("📊 Goals Overview")
 
         st.dataframe(
-
-            df_goals.assign(
-
-                **{
-
-                    "Future Cost": lambda x:
-                    x["Future Cost"].apply(format_currency),
-
-                    "Required SIP": lambda x:
-                    x["Required SIP"].apply(format_currency),
-
-                    "Probability": lambda x:
-                    (x["Probability"]*100).map("{:.1f}%".format)
-
-                }
-
-            ),
-
+            df_goals.style.format({
+                "Future Cost": "₹{:,.0f}",
+                "Required SIP": "₹{:,.0f}",
+                "Probability": "{:.1%}"
+            }),
             use_container_width=True
         )
 
@@ -392,19 +271,16 @@ with center:
         # SIP BAR CHART
         # --------------------------------------------------
 
-        fig_sip = px.bar(
+        fig = px.bar(
             df_goals,
             x="Goal",
             y="Required SIP",
-            template="plotly_dark",
             color="Required SIP",
-            title="Monthly SIP Required per Goal"
+            template="plotly_dark",
+            title="Monthly SIP Needed per Goal"
         )
 
-        st.plotly_chart(
-            fig_sip,
-            use_container_width=True
-        )
+        st.plotly_chart(fig, use_container_width=True)
 
         # --------------------------------------------------
         # SUCCESS PROBABILITY
@@ -414,15 +290,12 @@ with center:
             df_goals,
             x="Goal",
             y="Probability",
-            template="plotly_dark",
             color="Probability",
+            template="plotly_dark",
             title="Goal Success Probability"
         )
 
-        st.plotly_chart(
-            fig_prob,
-            use_container_width=True
-        )
+        st.plotly_chart(fig_prob, use_container_width=True)
 
         # --------------------------------------------------
         # LIFETIME WEALTH PROJECTION
@@ -430,26 +303,28 @@ with center:
 
         st.subheader("📈 Lifetime Wealth Projection")
 
-        life = simulate_life(income, savings)
+        try:
 
-        life_df = pd.DataFrame({
+            life = simulate_life(income, savings)
 
-            "Year": range(len(life)),
-            "Wealth": life
+            life_df = pd.DataFrame({
+                "Year": range(len(life)),
+                "Wealth": life
+            })
 
-        })
+            fig_life = px.line(
+                life_df,
+                x="Year",
+                y="Wealth",
+                template="plotly_dark",
+                title="Future Wealth Growth"
+            )
 
-        fig_life = px.line(
-            life_df,
-            x="Year",
-            y="Wealth",
-            template="plotly_dark"
-        )
+            st.plotly_chart(fig_life, use_container_width=True)
 
-        st.plotly_chart(
-            fig_life,
-            use_container_width=True
-        )
+        except Exception as e:
+
+            st.warning("Could not generate life projection")
 
 # ==================================================
 # FINLEY CHATBOT
@@ -460,5 +335,6 @@ st.divider()
 finley_chat(
     income,
     savings,
-    goals=get_goals()
+    goals=goals_list
 )
+

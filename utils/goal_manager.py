@@ -12,7 +12,7 @@ def initialize_goals():
 # -----------------------
 # Add Goal
 # -----------------------
-def add_goal(name, cost, years, goal_type, note):
+def add_goal(name, cost, years, goal_type, note=""):
     st.session_state.goals.append({
         "name": name,
         "cost": float(cost),

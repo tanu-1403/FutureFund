@@ -1,91 +1,198 @@
-# dashboard/finley_chatbot.py
-import sys, os
+
+import sys
+import os
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import streamlit as st
-from utils.goal_manager import get_goals
-from utils.helpers import calculate_monthly_sip, format_currency, generate_insight
-from src.scenario_simulator import simulate_delay
+import pandas as pd
+
+from src.financial_engine import future_goal_value, required_sip
 from src.monte_carlo import monte_carlo_simulation
-from src.ai_advisor import generate_advice
+
+
+# --------------------------------------------------
+# INITIALIZE CHAT
+# --------------------------------------------------
 
 def initialize_chat():
+
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
+
+# --------------------------------------------------
+# MAIN CHAT FUNCTION
+# --------------------------------------------------
+
 def finley_chat(income, savings, goals=None):
+
     initialize_chat()
+
     st.markdown("### 🤖 Chat with Finley")
 
-    user_input = st.chat_input("Ask Finley anything about your finances")
+    user_input = st.chat_input("Ask Finley about your finances")
 
     if user_input:
+
         response = generate_response(user_input, income, savings, goals)
+
         st.session_state.chat_history.append(("user", user_input))
         st.session_state.chat_history.append(("assistant", response))
 
-    # Display chat history
+        # limit history size
+        if len(st.session_state.chat_history) > 20:
+            st.session_state.chat_history = st.session_state.chat_history[-20:]
+
+    # display chat
     for role, msg in st.session_state.chat_history:
-        if role == "user":
-            st.chat_message("user").write(msg)
-        else:
-            st.chat_message("assistant").write(msg)
+
+        with st.chat_message(role):
+            st.write(msg)
+
+
+# --------------------------------------------------
+# FIND GOAL BY NAME
+# --------------------------------------------------
+
+def find_goal(question, goals):
+
+    if not goals:
+        return None
+
+    q = question.lower()
+
+    for g in goals:
+        if g.get("name","").lower() in q:
+            return g
+
+    return goals[0]  # fallback
+
+
+# --------------------------------------------------
+# GENERATE RESPONSE
+# --------------------------------------------------
 
 def generate_response(question, income, savings, goals):
+
     q = question.lower()
-    matched_goal = None
 
-    # Try to match a goal by name
-    if goals:
-        for g in goals:
-            if g["name"].lower() in q:
-                matched_goal = g
-                break
+    # -----------------------------------------
+    # SAVINGS ADVICE
+    # -----------------------------------------
 
-    # Savings advice
     if "save" in q:
+
         rate = savings / income if income > 0 else 0
-        return f"You currently save {rate*100:.1f}% of your income. Try to reach at least 20%."
 
-    # Investment / SIP advice
-    if "invest" in q or "sip" in q:
-        if matched_goal:
-            sip = calculate_monthly_sip(matched_goal['future_cost'], matched_goal['years'])
-            return f"To achieve '{matched_goal['name']}', you should invest about {format_currency(sip)} per month."
-        return "Please mention a goal to calculate SIP."
+        return f"You currently save **{rate*100:.1f}%** of your income. Aim for at least **20%**."
 
-    # Delay advice
-    if "delay" in q or "late" in q:
-        if matched_goal:
-            delay_res = simulate_delay(
-                matched_goal["name"],
-                matched_goal["future_cost"],
-                matched_goal["years"],
-                delay=1
-            )
-            return (
-                f"If you delay '{matched_goal['name']}' by 1 year, your required SIP increases "
-                f"from {format_currency(delay_res['sip_now'])} to {format_currency(delay_res['sip_delayed'])}."
-            )
-        return "Please mention a goal to simulate delay."
+    # -----------------------------------------
+    # GOAL COUNT
+    # -----------------------------------------
 
-    # Probability / risk inquiry
+    if "goal" in q:
+
+        if not goals:
+            return "You have not added any goals yet."
+
+        return f"You currently have **{len(goals)} financial goals.**"
+
+    # -----------------------------------------
+    # SIP CALCULATION
+    # -----------------------------------------
+
+    if "sip" in q or "invest" in q:
+
+        if not goals:
+            return "Please add a goal first so I can calculate SIP."
+
+        g = find_goal(question, goals)
+
+        future_cost = future_goal_value(
+            g.get("cost",0),
+            0.06,
+            g.get("years",1)
+        )
+
+        sip = required_sip(
+            future_cost,
+            0.10,
+            g.get("years",1)
+        )
+
+        return f"For goal **'{g.get('name')}'** you should invest about **₹{sip:,.0f} per month.**"
+
+    # -----------------------------------------
+    # PROBABILITY CALCULATION
+    # -----------------------------------------
+
     if "probability" in q or "chance" in q:
-        if matched_goal:
-            sip = calculate_monthly_sip(matched_goal['future_cost'], matched_goal['years'])
-            mc = monte_carlo_simulation(sip, matched_goal['years'], simulations=500)
-            success_prob = (pd.Series(mc) >= matched_goal['future_cost']).mean()
-            return f"The probability of achieving '{matched_goal['name']}' is approximately {success_prob*100:.1f}%."
-        return "Please mention a goal to calculate probability."
 
-    # Advice inquiry
+        if not goals:
+            return "Please add a goal first."
+
+        g = find_goal(question, goals)
+
+        future_cost = future_goal_value(
+            g.get("cost",0),
+            0.06,
+            g.get("years",1)
+        )
+
+        sip = required_sip(
+            future_cost,
+            0.10,
+            g.get("years",1)
+        )
+
+        try:
+
+            mc = monte_carlo_simulation(
+                sip,
+                g.get("years",1),
+                simulations=500
+            )
+
+            mc_values = pd.to_numeric(
+                pd.Series(mc),
+                errors="coerce"
+            ).dropna()
+
+            prob = (mc_values >= future_cost).mean()
+
+            return f"The probability of achieving **'{g.get('name')}'** is about **{prob*100:.1f}%**."
+
+        except:
+
+            return "I couldn't calculate probability due to a simulation issue."
+
+    # -----------------------------------------
+    # GENERAL ADVICE
+    # -----------------------------------------
+
     if "advice" in q or "plan" in q:
-        if matched_goal:
-            sip = calculate_monthly_sip(matched_goal['future_cost'], matched_goal['years'])
-            mc = monte_carlo_simulation(sip, matched_goal['years'], simulations=500)
-            success_prob = (pd.Series(mc) >= matched_goal['future_cost']).mean()
-            adv = generate_advice(matched_goal['name'], income, savings, sip, success_prob)
-            return "\n".join(f"- {a}" for a in adv)
-        return "Please mention a goal to get advice."
 
-    return "That's a great question! Ask me about saving, investing, goal SIPs, probability, or planning advice."
+        rate = savings / income if income > 0 else 0
+
+        if rate < 0.1:
+            return "Your savings rate is low. Try saving **at least 20% of your income.**"
+
+        if rate < 0.2:
+            return "Good start! Increasing savings slightly will help you reach goals faster."
+
+        return "Excellent savings discipline. Consider diversifying investments."
+
+    # -----------------------------------------
+    # DEFAULT
+    # -----------------------------------------
+
+    return """
+You can ask me things like:
+
+• How much should I save?  
+• What SIP do I need for my goal?  
+• What is the probability of achieving my goal?  
+• Give me financial advice  
+"""
+
