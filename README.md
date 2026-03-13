@@ -14,7 +14,7 @@ pip install -r requirements.txt
 streamlit run dashboard/dashboard_app.py
 ```
 
-Open http://localhost:8501 in your browser.
+🔗 Live Demo: https://futurefund-erbukphygq3ma7qhfjwghm.streamlit.app/
 
 ---
 
