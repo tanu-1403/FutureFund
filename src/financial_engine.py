@@ -1,137 +1,83 @@
+"""
+FutureFund – Financial Engine
+Core financial formula implementations.
+All calculations are illustrative and educational.
+"""
+import sys
+import os
 
-import numpy as np
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+import math
 
 
-# --------------------------------------------------
-# FUTURE GOAL VALUE (Inflation Adjustment)
-# --------------------------------------------------
-
-def future_goal_value(cost, years, inflation=0.06):
+def future_value(present_value: float, inflation_rate: float, years: int) -> float:
     """
-    Calculate inflation-adjusted future cost of a goal.
-
-    Parameters
-    ----------
-    cost : float
-        Current cost of the goal
-    years : int
-        Years until the goal
-    inflation : float
-        Annual inflation rate (default 6%)
-
-    Returns
-    -------
-    float
-        Future cost of the goal
+    Calculate the future cost of a goal after inflation.
+    FV = PV × (1 + i)^n
     """
-
-    try:
-        cost = float(cost)
-        years = int(years)
-        inflation = float(inflation)
-    except:
-        raise ValueError("Invalid input values")
-
     if years <= 0:
-        raise ValueError("Years must be greater than 0")
-
-    if cost < 0:
-        raise ValueError("Cost must be non-negative")
-
-    future_cost = cost * (1 + inflation) ** years
-
-    return round(future_cost, 2)
+        return present_value
+    return present_value * math.pow(1 + inflation_rate / 100, years)
 
 
-# --------------------------------------------------
-# REQUIRED SIP CALCULATOR
-# --------------------------------------------------
-
-def required_sip(future_value, annual_return=0.08, years=10):
+def required_sip(future_goal: float, annual_return: float, years: int) -> float:
     """
-    Calculate the monthly SIP required to achieve a target future value.
-
-    Uses the future value of SIP formula.
-
-    Parameters
-    ----------
-    future_value : float
-        Target future amount
-    annual_return : float
-        Expected annual return (default 8%)
-    years : int
-        Investment horizon in years
-
-    Returns
-    -------
-    float
-        Monthly SIP required
+    Calculate required monthly SIP to reach a future goal.
+    SIP = FV × r / [((1 + r)^n − 1) × (1 + r)]
+    where r = monthly rate, n = total months
     """
-
-    try:
-        future_value = float(future_value)
-        annual_return = float(annual_return)
-        years = int(years)
-    except:
-        raise ValueError("Invalid numeric input")
-
-    if future_value <= 0:
-        raise ValueError("Future value must be positive")
-
-    if years <= 0:
-        raise ValueError("Years must be greater than 0")
-
-    if annual_return <= 0:
-        raise ValueError("Annual return must be positive")
-
-    # Monthly return
-    r = annual_return / 12
-
-    # Number of months
+    if years <= 0 or future_goal <= 0:
+        return 0.0
+    r = (annual_return / 100) / 12
     n = years * 12
-
-    # SIP formula
-    denominator = ((1 + r) ** n - 1) * (1 + r)
-
-    if denominator == 0:
-        raise ValueError("Invalid parameters for SIP calculation")
-
-    sip = (future_value * r) / denominator
-
-    return round(sip, 2)
+    if r == 0:
+        return future_goal / n
+    sip = (future_goal * r) / ((math.pow(1 + r, n) - 1) * (1 + r))
+    return max(sip, 0.0)
 
 
-# --------------------------------------------------
-# FUTURE VALUE OF EXISTING SIP
-# (useful for projections)
-# --------------------------------------------------
-
-def sip_future_value(monthly_investment, annual_return=0.08, years=10):
+def sip_future_value(monthly_sip: float, annual_return: float, years: int) -> float:
     """
-    Calculates future value of a monthly SIP.
-
-    Parameters
-    ----------
-    monthly_investment : float
-        Monthly investment amount
-    annual_return : float
-        Expected annual return
-    years : int
-        Investment horizon
-
-    Returns
-    -------
-    float
-        Future portfolio value
+    Calculate future value of a fixed monthly SIP.
+    FV = P × [((1 + r)^n − 1) / r] × (1 + r)
     """
-
-    if monthly_investment <= 0:
-        return 0
-
-    r = annual_return / 12
+    if years <= 0 or monthly_sip <= 0:
+        return 0.0
+    r = (annual_return / 100) / 12
     n = years * 12
+    if r == 0:
+        return monthly_sip * n
+    return monthly_sip * ((math.pow(1 + r, n) - 1) / r) * (1 + r)
 
-    fv = monthly_investment * (((1 + r) ** n - 1) / r) * (1 + r)
 
-    return round(fv, 2)
+def savings_rate(monthly_savings: float, monthly_income: float) -> float:
+    """Return savings rate as a percentage."""
+    if monthly_income <= 0:
+        return 0.0
+    return (monthly_savings / monthly_income) * 100
 
+
+def affordability_score(
+    monthly_sip: float,
+    monthly_savings: float,
+    monthly_income: float
+) -> dict:
+    """
+    Returns an affordability assessment dict with score, label and colour.
+    """
+    if monthly_savings <= 0 or monthly_income <= 0:
+        return {"score": 0, "label": "Unknown", "color": "#888888"}
+
+    ratio = monthly_sip / monthly_savings if monthly_savings > 0 else float("inf")
+
+    if ratio <= 0.3:
+        return {"score": 95, "label": "Very Affordable", "color": "#00c896"}
+    elif ratio <= 0.5:
+        return {"score": 75, "label": "Affordable", "color": "#4caf50"}
+    elif ratio <= 0.75:
+        return {"score": 50, "label": "Moderate Stretch", "color": "#ff9800"}
+    elif ratio <= 1.0:
+        return {"score": 25, "label": "Tight Budget", "color": "#f44336"}
+    else:
+        return {"score": 5, "label": "Needs Adjustment", "color": "#b71c1c"}

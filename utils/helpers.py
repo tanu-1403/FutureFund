@@ -1,70 +1,61 @@
-
-def format_currency(x, currency="₹"):
-    """
-    Formats a number as currency with commas.
-    Example: 1250000 -> ₹1,250,000
-    """
-    if x is None:
-        return f"{currency}0"
-
-    return f"{currency}{x:,.0f}"
+"""
+FutureFund – Helpers
+Formatting and general utility functions.
+"""
 
 
-def generate_insight(sip_now, sip_later, goal_name=None):
-    """
-    Generates a textual insight comparing two SIP scenarios.
-    """
-
-    if sip_now <= 0:
-        return "Unable to generate insight due to invalid SIP value."
-
-    diff_percent = ((sip_later - sip_now) / sip_now) * 100
-
-    goal_text = f" for your goal '{goal_name}'" if goal_name else ""
-
-    if diff_percent > 0:
-        return (
-            f"⚠ Delaying investment{goal_text} increases the required SIP "
-            f"by {diff_percent:.1f}%."
-        )
-    elif diff_percent < 0:
-        return (
-            f"✅ Investing earlier{goal_text} reduces the required SIP "
-            f"by {abs(diff_percent):.1f}%."
-        )
-    else:
-        return "No difference between the two investment scenarios."
+def fmt_inr(value: float, short: bool = False) -> str:
+    """Format a number as Indian Rupees."""
+    if value is None:
+        return "₹0"
+    v = abs(value)
+    sign = "-" if value < 0 else ""
+    if short:
+        if v >= 1e7:
+            return f"{sign}₹{v/1e7:.2f} Cr"
+        elif v >= 1e5:
+            return f"{sign}₹{v/1e5:.2f} L"
+        elif v >= 1e3:
+            return f"{sign}₹{v/1e3:.1f} K"
+        return f"{sign}₹{v:,.0f}"
+    if v >= 1e7:
+        return f"{sign}₹{v/1e7:.2f} Cr"
+    elif v >= 1e5:
+        return f"{sign}₹{v/1e5:.2f} L"
+    return f"{sign}₹{v:,.0f}"
 
 
-def calculate_monthly_sip(future_value, years, annual_return=0.08):
-    """
-    Calculate required monthly SIP to reach a future goal.
+def fmt_pct(value: float, decimals: int = 1) -> str:
+    return f"{value:.{decimals}f}%"
 
-    Formula:
-        FV = P * [((1+r)^n - 1) / r]
 
-    Where:
-        FV = future value
-        P  = SIP amount
-        r  = monthly interest rate
-        n  = number of months
-    """
+def fmt_years(years: int) -> str:
+    if years == 1:
+        return "1 year"
+    return f"{years} years"
 
-    if future_value <= 0:
-        raise ValueError("Future value must be positive")
 
-    if years <= 0:
-        raise ValueError("Years must be positive")
+def clamp(value, min_val, max_val):
+    return max(min_val, min(max_val, value))
 
-    months = years * 12
-    monthly_rate = annual_return / 12
 
-    # Edge case: zero return
-    if monthly_rate == 0:
-        sip = future_value / months
-        return round(sip, 2)
+def health_color(score: float) -> str:
+    """Return a color string based on a 0–100 score."""
+    if score >= 75:
+        return "#00c896"
+    elif score >= 50:
+        return "#ffa502"
+    elif score >= 25:
+        return "#ff6b6b"
+    return "#b71c1c"
 
-    sip = future_value * monthly_rate / (((1 + monthly_rate) ** months) - 1)
 
-    return round(sip, 2)
-
+def probability_label(prob: float) -> tuple[str, str]:
+    """Return (label, color) for a probability percentage."""
+    if prob >= 80:
+        return "High Confidence", "#00c896"
+    elif prob >= 60:
+        return "Moderate Confidence", "#ffa502"
+    elif prob >= 40:
+        return "Uncertain", "#ff9800"
+    return "Needs Review", "#ff4757"

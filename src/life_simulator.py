@@ -1,112 +1,82 @@
+"""
+FutureFund – Life Simulator
+Projects lifetime wealth accumulation across user-defined life phases.
+"""
 
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
+import pandas as pd
+import numpy as np
 
 
-def simulate_life(
-    income,
-    savings_rate,
-    growth=0.08,
-    years=30,
-    inflation=0.06,
-    monthly=False,
-    salary_growth=0.05,
-    start_date=None
-):
+# Default life phases (user can override)
+DEFAULT_PHASES = [
+    {"name": "Early Career",   "age_start": 22, "age_end": 35, "income_growth": 8,  "savings_rate": 20},
+    {"name": "Growth Phase",   "age_start": 35, "age_end": 50, "income_growth": 5,  "savings_rate": 30},
+    {"name": "Peak Earnings",  "age_start": 50, "age_end": 60, "income_growth": 3,  "savings_rate": 40},
+    {"name": "Pre-Retirement", "age_start": 60, "age_end": 65, "income_growth": 2,  "savings_rate": 50},
+    {"name": "Retirement",     "age_start": 65, "age_end": 85, "income_growth": 0,  "savings_rate": -5},
+]
+
+
+def simulate_lifetime_wealth(
+    current_age: int,
+    current_savings: float,       # total existing savings/investments
+    monthly_income: float,
+    annual_return: float,
+    inflation_rate: float,
+    goal_withdrawals: list = None,  # list of {year_from_now, amount}
+) -> pd.DataFrame:
     """
-    Simulate lifetime wealth accumulation.
+    Simulate year-by-year net worth from current_age to age 85.
 
-    Parameters
-    ----------
-    income : float
-        Monthly income
-    savings_rate : float
-        Fraction of income saved (0-1)
-    growth : float
-        Annual investment return
-    years : int
-        Simulation horizon
-    inflation : float
-        Annual inflation
-    monthly : bool
-        Monthly or yearly simulation
-    salary_growth : float
-        Annual salary increase
-    start_date : datetime
-        Optional start date
-
-    Returns
-    -------
-    list[dict]
-        Wealth history
+    Returns DataFrame with: age, year, net_worth, annual_savings, cumulative_invested
     """
+    goal_withdrawals = goal_withdrawals or []
+    withdrawal_map = {w["year_from_now"]: w["amount"] for w in goal_withdrawals}
 
-    if income <= 0:
-        raise ValueError("Income must be positive")
+    r_monthly = (annual_return / 100) / 12
+    r_annual  = (1 + r_monthly) ** 12 - 1
 
-    if not (0 <= savings_rate <= 1):
-        raise ValueError("Savings rate must be between 0 and 1")
+    records = []
+    net_worth = current_savings
+    income = monthly_income * 12
+    year = 0
 
-    if not start_date:
-        start_date = datetime.today()
+    for age in range(current_age, 86):
+        # Determine phase
+        phase = _get_phase(age)
+        savings_rate_pct = phase["savings_rate"] if phase else 20
+        income_growth    = phase["income_growth"] if phase else 3
 
-    history = []
-    wealth = 0
+        # Annual savings contribution
+        annual_savings = income * (savings_rate_pct / 100)
+        if annual_savings < 0:
+            annual_savings = abs(annual_savings) * -1   # drawdown in retirement
 
-    # ---------------------------------------
-    # MONTHLY SIMULATION
-    # ---------------------------------------
+        # Grow net worth
+        net_worth = net_worth * (1 + r_annual) + annual_savings
 
-    if monthly:
+        # Subtract goal withdrawals
+        if year in withdrawal_map:
+            net_worth = max(0, net_worth - withdrawal_map[year])
 
-        months = years * 12
+        records.append({
+            "age": age,
+            "year": year,
+            "net_worth": round(max(net_worth, 0), 2),
+            "annual_savings": round(annual_savings, 2),
+            "income": round(income, 2),
+            "phase": phase["name"] if phase else "Retirement",
+        })
 
-        monthly_growth = (1 + growth) ** (1/12) - 1
-        monthly_inflation = (1 + inflation) ** (1/12) - 1
+        # Grow income for next year
+        income *= (1 + income_growth / 100)
+        year += 1
 
-        current_income = income
+    return pd.DataFrame(records)
 
-        for m in range(1, months + 1):
 
-            monthly_savings = current_income * savings_rate
-
-            wealth = wealth * (1 + monthly_growth) + monthly_savings
-
-            real_wealth = wealth / ((1 + monthly_inflation) ** m)
-
-            history.append({
-                "date": start_date + relativedelta(months=m),
-                "nominal": round(wealth, 2),
-                "real_value": round(real_wealth, 2)
-            })
-
-            # increase salary yearly
-            if m % 12 == 0:
-                current_income *= (1 + salary_growth)
-
-    # ---------------------------------------
-    # YEARLY SIMULATION
-    # ---------------------------------------
-
-    else:
-
-        current_income = income
-
-        for y in range(1, years + 1):
-
-            yearly_savings = current_income * savings_rate * 12
-
-            wealth = wealth * (1 + growth) + yearly_savings
-
-            real_wealth = wealth / ((1 + inflation) ** y)
-
-            history.append({
-                "year": y,
-                "nominal": round(wealth, 2),
-                "real_value": round(real_wealth, 2)
-            })
-
-            current_income *= (1 + salary_growth)
-
-    return history
-
+def _get_phase(age: int) -> dict:
+    for phase in DEFAULT_PHASES:
+        if phase["age_start"] <= age < phase["age_end"]:
+            return phase
+    return DEFAULT_PHASES[-1]

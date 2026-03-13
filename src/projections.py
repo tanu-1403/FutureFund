@@ -1,90 +1,58 @@
+"""
+FutureFund – Projections
+Month-by-month investment growth timeseries for charting.
+"""
 
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
+import pandas as pd
+from src.financial_engine import future_value
 
 
-def investment_projection(
-    sip,
-    annual_return,
-    years,
-    inflation=0.06,
-    sip_growth=0.0,
-    start_date=None
-):
+def build_growth_projection(
+    monthly_sip: float,
+    annual_return: float,
+    years: int,
+    goal_target: float,
+) -> pd.DataFrame:
     """
-    Project investment growth over time with compounding and inflation adjustment.
+    Build a month-by-month investment growth DataFrame.
 
-    Parameters
-    ----------
-    sip : float
-        Monthly investment
-    annual_return : float
-        Expected annual return (decimal)
-    years : int
-        Investment horizon
-    inflation : float
-        Annual inflation rate
-    sip_growth : float
-        Optional annual increase in SIP
-    start_date : datetime
-        Optional start date
-
-    Returns
-    -------
-    list[dict]
-        Monthly portfolio projections
+    Returns columns: month, invested, portfolio_value, goal_line
     """
+    r = (annual_return / 100) / 12
+    records = []
+    portfolio = 0.0
+    total_invested = 0.0
 
-    # -----------------------------
-    # Input validation
-    # -----------------------------
-    sip = float(sip)
-    annual_return = float(annual_return)
-    years = int(years)
-
-    if sip < 0:
-        raise ValueError("SIP must be non-negative")
-
-    if years <= 0:
-        raise ValueError("Years must be positive")
-
-    if not start_date:
-        start_date = datetime.today()
-
-    months = years * 12
-    monthly_return = annual_return / 12
-    monthly_inflation = (1 + inflation) ** (1/12) - 1
-
-    portfolio = 0
-    projections = []
-
-    current_sip = sip
-
-    # -----------------------------
-    # Projection loop
-    # -----------------------------
-    for m in range(1, months + 1):
-
-        portfolio = portfolio * (1 + monthly_return) + current_sip
-
-        # inflation-adjusted value
-        real_value = portfolio / ((1 + monthly_inflation) ** m)
-
-        projections.append({
-
-            "date": start_date + relativedelta(months=m),
-
-            "nominal": round(portfolio, 2),
-
-            "real_value": round(real_value, 2),
-
-            "sip": round(current_sip, 2)
-
+    for month in range(1, years * 12 + 1):
+        portfolio = portfolio * (1 + r) + monthly_sip
+        total_invested += monthly_sip
+        records.append({
+            "month": month,
+            "year": month / 12,
+            "invested": round(total_invested, 2),
+            "portfolio_value": round(portfolio, 2),
+            "goal_line": round(goal_target, 2),
+            "gains": round(portfolio - total_invested, 2),
         })
 
-        # yearly SIP increase
-        if sip_growth > 0 and m % 12 == 0:
-            current_sip *= (1 + sip_growth)
+    return pd.DataFrame(records)
 
-    return projections
 
+def build_goal_timeline(goals: list, annual_return: float, inflation_rate: float) -> pd.DataFrame:
+    """
+    Build a summary DataFrame of all goals with FV and SIP.
+    goals: list of dicts with keys: name, cost, years
+    """
+    from src.financial_engine import future_value, required_sip
+    rows = []
+    for g in goals:
+        fv = future_value(g["cost"], inflation_rate, g["years"])
+        sip = required_sip(fv, annual_return, g["years"])
+        rows.append({
+            "Goal": g["name"],
+            "Current Cost": g["cost"],
+            "Years Away": g["years"],
+            "Inflation-Adjusted Cost": round(fv, 2),
+            "Required Monthly SIP": round(sip, 2),
+        })
+    return pd.DataFrame(rows) if rows else pd.DataFrame()

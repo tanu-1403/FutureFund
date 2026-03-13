@@ -1,100 +1,81 @@
-import streamlit as st
-import json
-import os
+"""
+FutureFund – Goal Manager
+Handles CRUD operations for financial goals stored in st.session_state.
+"""
 
-# -----------------------
-# Initialize Goals
-# -----------------------
-def initialize_goals():
-    if "goals" not in st.session_state:
-        st.session_state.goals = []
+import uuid
+from datetime import datetime
+from typing import Optional
 
-# -----------------------
-# Add Goal
-# -----------------------
-def add_goal(name, cost, years, goal_type, note=""):
-    st.session_state.goals.append({
-        "name": name,
-        "cost": float(cost),
-        "years": int(years),
-        "goal_type": goal_type,
-        "note": note
-    })
 
-# -----------------------
-# Get Goals
-# -----------------------
-def get_goals():
-    return st.session_state.get("goals", [])
+GOAL_ICONS = {
+    "car":       "🚗",
+    "house":     "🏠",
+    "education": "🎓",
+    "retirement":"🌴",
+    "travel":    "✈️",
+    "wedding":   "💍",
+    "business":  "💼",
+    "emergency": "🛡️",
+    "other":     "⭐",
+}
 
-# -----------------------
-# Display Sticky Goals
-# -----------------------
-def display_sticky_goals():
-    for i, g in enumerate(st.session_state.goals):
-        st.markdown(f"""
-        <div style="
-        background:#fff59d;
-        padding:12px;
-        border-radius:10px;
-        margin-bottom:10px;
-        box-shadow:2px 2px 5px rgba(0,0,0,0.3);
-        color:black;
-        ">
-        <b>{g['name']}</b><br>
-        Goal Type: {g['goal_type']}<br>
-        ₹{g['cost']:,} | {g['years']} yrs<br><br>
-        {g['note']}
-        </div>
-        """, unsafe_allow_html=True)
 
-# -----------------------
-# Delete Goal
-# -----------------------
-def delete_goal(index):
-    if "goals" in st.session_state and 0 <= index < len(st.session_state.goals):
-        st.session_state.goals.pop(index)
+def make_goal(
+    name: str,
+    cost: float,
+    years: int,
+    category: str = "other",
+    notes: str = "",
+    priority: str = "Medium",
+) -> dict:
+    """Create a new goal dict."""
+    return {
+        "id":        str(uuid.uuid4())[:8],
+        "name":      name.strip(),
+        "cost":      float(cost),
+        "years":     int(years),
+        "category":  category.lower(),
+        "notes":     notes.strip(),
+        "priority":  priority,
+        "created_at": datetime.now().strftime("%b %d, %Y"),
+        "icon":      GOAL_ICONS.get(category.lower(), "⭐"),
+    }
 
-# -----------------------
-# Edit Goal
-# -----------------------
-def edit_goal(index, name, cost, years, goal_type, note):
-    if 0 <= index < len(st.session_state.goals):
-        st.session_state.goals[index] = {
-            "name": name,
-            "cost": float(cost),
-            "years": int(years),
-            "goal_type": goal_type,
-            "note": note
-        }
 
-# -----------------------
-# Save Goals
-# -----------------------
-def save_goals_to_file(file_path="goals.json"):
-    try:
-        with open(file_path, "w") as f:
-            json.dump(st.session_state.get("goals", []), f, indent=4)
-    except Exception as e:
-        st.error(f"Error saving goals: {e}")
+def add_goal(goals: list, goal: dict) -> list:
+    return goals + [goal]
 
-# -----------------------
-# Load Goals
-# -----------------------
-def load_goals_from_file(file_path="goals.json"):
-    if os.path.exists(file_path):
-        try:
-            with open(file_path, "r") as f:
-                st.session_state.goals = json.load(f)
-        except Exception as e:
-            st.error(f"Error loading goals: {e}")
 
-# -----------------------
-# Future Cost Calculator
-# -----------------------
-def calculate_future_cost(current_cost, years, inflation):
-    """
-    Calculate inflated future cost of a financial goal.
-    """
-    future_cost = current_cost * ((1 + inflation) ** years)
-    return round(future_cost, 2)
+def remove_goal(goals: list, goal_id: str) -> list:
+    return [g for g in goals if g["id"] != goal_id]
+
+
+def get_goal_by_id(goals: list, goal_id: str) -> Optional[dict]:
+    for g in goals:
+        if g["id"] == goal_id:
+            return g
+    return None
+
+
+def total_sip_required(goals: list, annual_return: float, inflation_rate: float) -> float:
+    """Sum of required SIPs for all goals."""
+    from src.financial_engine import future_value, required_sip
+    total = 0.0
+    for g in goals:
+        fv = future_value(g["cost"], inflation_rate, g["years"])
+        total += required_sip(fv, annual_return, g["years"])
+    return total
+
+
+def sort_goals(goals: list, by: str = "years") -> list:
+    """Sort goals by 'years', 'cost', or 'name'."""
+    return sorted(goals, key=lambda g: g.get(by, 0))
+
+
+PRIORITY_ORDER = {"High": 0, "Medium": 1, "Low": 2}
+PRIORITY_COLORS = {
+    "High":   "#ff4757",
+    "Medium": "#ffa502",
+    "Low":    "#2ed573",
+}
